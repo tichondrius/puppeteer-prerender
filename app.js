@@ -38,7 +38,6 @@ router.get('/render', async function(req, res) {
     if (!prerenderReadyCheck) {
       await page.goto(url, { waitUntil: 'networkidle2' });
       html = await page.evaluate(() => document.documentElement.outerHTML);
-      console.log('1');
     } else {
       await page.goto(url, { waitUntil: 'domcontentloaded' });
       let currentTime = 0;
