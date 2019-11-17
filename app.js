@@ -19,29 +19,41 @@ const pageDoneCheckInterval = 300;
 const pageLoadTimeout = 20000;
 
 const port = process.env.PORT || 3000;
+let browser = null;
 
+async function initBrowser () {
+  browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+}
+
+
+
+initBrowser();
 
 router.get('/url', async function(req, res) {
   const url = req.query.url;
   try {
-    const browser = await puppeteer.launch();
     const page = await browser.newPage();
     await page.goto(url, { waitUntil: 'domcontentloaded' });
     let currentTime = 0;
+    let html = '';
     while (true) {
       let prerenderReady = await page.evaluate(() => window.prerenderReady);
       if (prerenderReady) {
         let bodyHTML = await page.evaluate(() => document.documentElement.innerHTML);
-        return res.json({ html: bodyHTML })
+        html = bodyHTML;
+        break;
       } else {
         if (currentTime > pageLoadTimeout) {
           let bodyHTML = await page.evaluate(() => document.documentElement.innerHTML);
-          return res.json({ html: bodyHTML });
+          html = bodyHTML;
+          break;
         }
         await utils.delay(pageDoneCheckInterval);
         currentTime += pageDoneCheckInterval;
       }
     }
+    page.close();
+    return res.json({ html });
   } catch (error) {
     console.log(error);
     res.status(500).send(error).end();
