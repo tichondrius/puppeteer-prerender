@@ -39,12 +39,12 @@ router.get('/url', async function(req, res) {
     while (true) {
       let prerenderReady = await page.evaluate(() => window.prerenderReady);
       if (prerenderReady) {
-        let bodyHTML = await page.evaluate(() => document.documentElement.innerHTML);
+        let bodyHTML = await page.evaluate(() => document.documentElement.outerHTML);
         html = bodyHTML;
         break;
       } else {
         if (currentTime > pageLoadTimeout) {
-          let bodyHTML = await page.evaluate(() => document.documentElement.innerHTML);
+          let bodyHTML = await page.evaluate(() => document.documentElement.outerHTML);
           html = bodyHTML;
           break;
         }
