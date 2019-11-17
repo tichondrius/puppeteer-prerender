@@ -29,27 +29,34 @@ async function initBrowser () {
 
 initBrowser();
 
-router.get('/url', async function(req, res) {
+router.get('/render', async function(req, res) {
   const url = req.query.url;
+  const prerenderReadyCheck = String(req.query.prerenderReadyCheck) === 'true';
+  let html = '';
+  const page = await browser.newPage();
   try {
-    const page = await browser.newPage();
-    await page.goto(url, { waitUntil: 'domcontentloaded' });
-    let currentTime = 0;
-    let html = '';
-    while (true) {
-      let prerenderReady = await page.evaluate(() => window.prerenderReady);
-      if (prerenderReady) {
-        let bodyHTML = await page.evaluate(() => document.documentElement.outerHTML);
-        html = bodyHTML;
-        break;
-      } else {
-        if (currentTime > pageLoadTimeout) {
+    if (!prerenderReadyCheck) {
+      await page.goto(url, { waitUntil: 'networkidle2' });
+      html = await page.evaluate(() => document.documentElement.outerHTML);
+      console.log('1');
+    } else {
+      await page.goto(url, { waitUntil: 'domcontentloaded' });
+      let currentTime = 0;
+      while (true) {
+        let prerenderReady = await page.evaluate(() => window.prerenderReady);
+        if (prerenderReady) {
           let bodyHTML = await page.evaluate(() => document.documentElement.outerHTML);
           html = bodyHTML;
           break;
+        } else {
+          if (currentTime > pageLoadTimeout) {
+            let bodyHTML = await page.evaluate(() => document.documentElement.outerHTML);
+            html = bodyHTML;
+            break;
+          }
+          await utils.delay(pageDoneCheckInterval);
+          currentTime += pageDoneCheckInterval;
         }
-        await utils.delay(pageDoneCheckInterval);
-        currentTime += pageDoneCheckInterval;
       }
     }
     page.close();
